@@ -1,19 +1,37 @@
 #include "HydrationTracker.hpp"
+#include <iostream>
+#include <numeric>
 
-HydrationTracker::HydrationTracker(const std::string& userId, double dailyGoalMl)
-    : userId(userId), dailyGoalMl(dailyGoalMl) {
+
+HydrationTracker::HydrationTracker() :  dailyGoalMl(2000) {}
+HydrationTracker::HydrationTracker(const std::string& uid, int goal) :  dailyGoalMl(goal) {}
+HydrationTracker::HydrationTracker(const HydrationTracker& other) :  dailyGoalMl(other.dailyGoalMl), logs(other.logs) {}
+
+
+HydrationTracker HydrationTracker::createHydrationTracker(const std::string& uid, int goalMl) {
+	return HydrationTracker(uid, goalMl);
 }
 
-void HydrationTracker::addDrink(double amountMl) {
-    todayTotalMl += amountMl;
+
+void HydrationTracker::addDrink(int amountMl) {
+	// feature: throw exception on invalid input
+	if (amountMl <= 0) {
+		throw std::invalid_argument("amountMl must be positive");
+	}
+	logs.push_back(amountMl); // std::string not needed here
 }
+
 
 double HydrationTracker::progressToday() const {
-    return (todayTotalMl / dailyGoalMl) * 100.0;
+	int total = std::accumulate(logs.begin(), logs.end(), 0);
+	if (dailyGoalMl == 0) return 0.0;
+	return static_cast<double>(total) / dailyGoalMl * 100.0;
 }
 
+
 void HydrationTracker::showHydrationInfo() const {
-    std::cout << "=== Вода (" << userId << ") ===\n";
-    std::cout << "Цель: " << dailyGoalMl << " мл\n";
-    std::cout << "Выпито: " << todayTotalMl << " мл (" << static_cast<int>(progressToday()) << "%)\n\n";
+	int total = std::accumulate(logs.begin(), logs.end(), 0);
+	std::cout << " Daily goal: " << dailyGoalMl << " ml"
+		<< " Total consumed: " << total << " ml"
+		<< " Progress: " << progressToday() << "%";
 }
