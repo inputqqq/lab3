@@ -1,16 +1,47 @@
 #include "Achievement.hpp"
 
-Achievement::Achievement(const std::string& id, const std::string& name, const std::string& criteria, int rewardPoints)
-    : id(id), name(name), criteria(criteria), rewardPoints(rewardPoints) {
+
+Achievement::Achievement() = default;
+
+
+Achievement::Achievement(const std::string& id_, const std::string& name_, const std::string& criteria_, int points)
+	: id(id_), name(name_), criteria(criteria_), rewardPoints(points) {
 }
 
-bool Achievement::checkEligibility(const std::string&) const {
-    return true; 
+
+// Copy constructor demonstration
+Achievement::Achievement(const Achievement& other)
+	: id(other.id), name(other.name), criteria(other.criteria), rewardPoints(other.rewardPoints) {
 }
+
+
+Achievement Achievement::createAchievement(const std::string& id_, const std::string& name_, const std::string& criteria_, int points) {
+	return Achievement(id_, name_, criteria_, points);
+}
+
+
+bool Achievement::checkEligibility() const {
+	// placeholder logic
+	return rewardPoints > 0;
+}
+
 
 void Achievement::showAchievementInfo() const {
-    std::cout << "=== Достижение ===\n";
-    std::cout << "Название: " << name << "\n";
-    std::cout << "Условие: " << criteria << "\n";
-    std::cout << "Очки: " << rewardPoints << "\n\n";
+	std::cout << "Achievement: " << name << " (" << id << ") - " << criteria << ", " << rewardPoints << " pts";
+}
+
+
+bool Achievement::operator==(const Achievement& rhs) const {
+	return id == rhs.id && name == rhs.name && rewardPoints == rhs.rewardPoints;
+}
+
+
+bool Achievement::operator!=(const Achievement& rhs) const {
+	return !(*this == rhs);
+}
+
+
+std::ostream& operator<<(std::ostream& os, const Achievement& a) {
+	os << a.name << "(" << a.id << ")";
+	return os;
 }
