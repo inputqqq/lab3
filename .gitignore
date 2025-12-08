@@ -1,4 +1,15 @@
-# Visual Studio
+
+proga3.sln
+proga3.vcxproj
+proga3.vcxproj.filters
+
+bin/
+obj/
+
+.vs/
+*.user
+*.suo
+*.cache
 .vs/
 Debug/
 Release/
