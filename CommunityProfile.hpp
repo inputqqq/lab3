@@ -1,43 +1,48 @@
-#ifndef COMMUNITYPROFILE_HPP
-#define COMMUNITYPROFILE_HPP
-
-
+// CommunityProfile.hpp
+#pragma once
 #include <string>
 #include <vector>
-#include <memory>
 #include <iostream>
 #include "Achievement.hpp"
+#include "ProfileBase.hpp"
 
+class CommunityProfile : public ProfileBase {
+protected:
+    // ƒемонстраци€ protected: производные классы могут обращатьс€ к этим пол€м
+    std::vector<std::string> friends;
+    std::vector<Achievement> badges;
 
-class CommunityProfile {
 public:
-	std::string id;
-	std::string nickname;
-	std::string joinedDate;
-	std::vector<std::string> friends; // store friend ids
-	std::vector<Achievement> badges;
+    std::string id;
+    std::string nickname;
+    std::string joinedDate;
 
+    // ѕоле-указатель дл€ демонстрации поверхностного vs глубокого копировани€
+    std::string* note;
 
-	CommunityProfile();
-	CommunityProfile(const std::string& id_, const std::string& nick_, const std::string& joined);
-	// Copy constructor (feature)
-	CommunityProfile(const CommunityProfile& other);
-	~CommunityProfile() = default;
+    CommunityProfile();
+    CommunityProfile(const std::string& id_, const std::string& nick_, const std::string& joined);
+    // ѕо условию: реализован конструктор копировани€
+    CommunityProfile(const CommunityProfile& other);
+    // ћожно запретить оператор копировани€ при необходимости, но тут демонстрируем копирование
+    CommunityProfile& operator=(const CommunityProfile& other);
 
+    virtual ~CommunityProfile(); // нужен дл€ правильного удалени€ note
 
-	static CommunityProfile createProfile(const std::string& id_, const std::string& nick_, const std::string& joined);
-	void addFriend(const std::string& friendId);
-	void awardBadge(const Achievement& badge);
-	void showProfileInfo() const;
+    static CommunityProfile createProfile(const std::string& id_, const std::string& nick_, const std::string& joined);
 
+    void addFriend(const std::string& friendId);
+    void awardBadge(const Achievement& badge);
 
-	// operator overload: concatenate nicknames (example)
-	CommunityProfile operator+(const CommunityProfile& rhs) const; // returns a combined profile (demo only)
+    // ѕереопределение виртуальной функции из ProfileBase
+    void showProfileInfo() const override;
 
+    // ƒемонстраци€ operator+ (оставлено как пример)
+    CommunityProfile operator+(const CommunityProfile& rhs) const;
 
-	// friend output
-	friend std::ostream& operator<<(std::ostream& os, const CommunityProfile& p);
+    //  лонирование (шаблоны: shallow vs deep)
+    ProfileBase* cloneShallow() const override; // поверхностное клонирование
+    ProfileBase* cloneDeep() const override;    // глубокое клонирование
+
+    friend std::ostream& operator<<(std::ostream& os, const CommunityProfile& p);
 };
-
-
-#endif // COMMUNITYPROFILE_HPP
