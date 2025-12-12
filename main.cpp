@@ -1,183 +1,89 @@
-﻿#include <iostream>
+﻿// main.cpp (обновлённый фрагмент — демонстрация новых возможностей)
+#include <iostream>
+#include <memory>
+#include <vector>
 
+#include "ProfileBase.hpp"
 #include "CommunityProfile.hpp"
+#include "PremiumProfile.hpp"
 #include "Achievement.hpp"
-#include "Challenge.hpp"
 #include "Leaderboard.hpp"
 #include "SleepTracker.hpp"
 #include "HydrationTracker.hpp"
 #include "RecoverySession.hpp"
+#include "Challenge.hpp"
 
 int main() {
+    std::cout << "=== Enhanced Fitness Community Demo  ===\n\n";
 
-    std::cout << "=== Enhanced Fitness Community Demo ===\n\n";
-
-    // --- STATIC and STACK objects ---
-    std::cout << "[ COMMUNITY PROFILE — STATIC ]\n";
+    // --- создаём базовый профиль (CommunityProfile) и premium профиль (производный) ---
     CommunityProfile alice = CommunityProfile::createProfile("u1", "Alice", "2025-01-01");
-    Achievement firstRun = Achievement::createAchievement("a1", "First Run", "Complete 1 run", 10);
+    alice.note = new std::string("Alice initial note"); // установим примечание
 
-    alice.awardBadge(firstRun);
-    alice.addFriend("u2");
-    alice.showProfileInfo();
-    std::cout << "\n";
+    PremiumProfile premiumBob("u2", "BobPremium", "2025-02-10", "Gold");
+    premiumBob.note = new std::string("BobPremium note");
 
+    // Демонстрация protected: PremiumProfile может обращаться к friends/badges напрямую в operator=
+    alice.addFriend("uX");
+    premiumBob.addFriend("uY");
 
-    // --- SMART POINTERS ---
-    std::cout << "[ SMART POINTERS ]\n";
+    // --- виртуальные функции через базовый указатель ---
+    ProfileBase* basePtr = &alice;      // указываем на базовый объект
+    ProfileBase* derivedPtr = &premiumBob; // указываем на производный через базовый указатель
 
-    std::unique_ptr<CommunityProfile> bob =
-        std::make_unique<CommunityProfile>("u2", "Bob", "2025-02-10");
+    std::cout << "[Calling a virtual function via a base pointer]\n";
+    basePtr->showProfileInfo();     // вызывает CommunityProfile::showProfileInfo
+    derivedPtr->showProfileInfo();  // вызывает PremiumProfile::showProfileInfo (переопределённый)
 
-    std::shared_ptr<CommunityProfile> carol =
-        std::make_shared<CommunityProfile>("u3", "Carol", "2025-03-03");
+    // --- вызов виртуальной функции через невиртуальную обёртку базового класса ---
+    std::cout << "\n[Calling via a non-virtual wrapper printViaNonVirtual()]\n";
+    basePtr->printViaNonVirtual();     // вызывает виртуальную функцию внутри -> динамический полиморфизм
+    derivedPtr->printViaNonVirtual();  // тоже вызывает переопределённую реализацию
 
-    bob->addFriend("u1");
-    carol->addFriend("u1");
+    // --- демонстрация клонирования: поверхностного и глубокого ---
+    std::cout << "\n[Profile cloning (shallow vs deep)]\n";
+    ProfileBase* shallow = alice.cloneShallow();
+    ProfileBase* deep = alice.cloneDeep();
 
-    bob->showProfileInfo();
-    carol->showProfileInfo();
+    // приводим к типу CommunityProfile* чтобы посмотреть note
+    CommunityProfile* shallowCp = dynamic_cast<CommunityProfile*>(shallow);
+    CommunityProfile* deepCp = dynamic_cast<CommunityProfile*>(deep);
 
-    std::shared_ptr<CommunityProfile> carolCopy = carol;
+    std::cout << "Original note: " << (alice.note ? *alice.note : "<null>") << "\n";
+    std::cout << "Shallow note: " << (shallowCp->note ? *shallowCp->note : "<null>") << "\n";
+    std::cout << "Deep note: " << (deepCp->note ? *deepCp->note : "<null>") << "\n";
 
-    std::cout << "carol use_count = " << carol.use_count() << "\n\n";
+    // Изменим оригиналную заметку и посмотрим поведение
+    *alice.note = "Alice changed note";
 
+    std::cout << "-- After changing original --\n";
+    std::cout << "Original note: " << *alice.note << "\n";
+    std::cout << "Shallow note: " << (shallowCp->note ? *shallowCp->note : "<null>") << " (same pointer -> changed)\n";
+    std::cout << "Deep note: " << (deepCp->note ? *deepCp->note : "<null>") << " (deep copy -> unchanged)\n";
 
-    // --- operator overloading examples ---
-    std::cout << "[ OPERATOR OVERLOADING ]\n";
+    // --- оператор присваивания базового класса к производному ---
+    std::cout << "\n[operator= from CommunityProfile to PremiumProfile]\n";
+    CommunityProfile copySrc = CommunityProfile::createProfile("u100", "CopySrc", "2025-07-07");
+    copySrc.note = new std::string("copySrc note");
+    premiumBob = copySrc; // используем PremiumProfile::operator=(const CommunityProfile&)
+    premiumBob.showProfileInfo();
 
-    Achievement a2 =
-        Achievement::createAchievement("a2", "First Run", "Complete 1 run", 10);
-    std::cout << "a2 == firstRun? " << (a2 == firstRun) << "\n";
-
-    CommunityProfile combined = alice + *carol;
-    std::cout << "Combined profile: " << combined << "\n\n";
-
-
-    // --- Leaderboard (operator+=, operator[]) ---
-    std::cout << "[ LEADERBOARD ]\n";
-
+    // --- запрет копирования Leaderboard (попытка закомментирована, чтобы не ломать сборку) ---
+    std::cout << "\n[Leaderboard copy ctor is deleted: compile-time check]\n";
     Leaderboard lb = Leaderboard::createLeaderboard("lb1", "week");
-
-    lb += { "u1", 100 };
-    lb += { "u2", 120 };
-    lb += { "u1", 50 };
-
+    lb += {"u1", 100};
+    lb += {"u2", 50};
     lb.showLeaderboard();
+    // Leaderboard lb2 = lb; // ОШИБКА компиляции: copy ctor удалён (чтобы продемонстрировать запрет копирования)
+    std::cout << "Attempting copy would fail at compile time (line commented)\n";
 
-    try {
-        auto pair = lb[0];
-        std::cout << "Top entry: " << pair.first << " - " << pair.second << "\n";
-    }
-    catch (const std::exception& ex) {
-        std::cout << "Leaderboard access error: " << ex.what() << "\n";
-    }
+    // --- виртуальный деструктор проверка: удаление через базовый указатель ---
+    ProfileBase* ptmp = new PremiumProfile("tmp", "TmpUser", "2025-08-01", "Silver");
+    delete ptmp; // должен корректно вызвать деструктор PremiumProfile и CommunityProfile благодаря virtual ~ProfileBase()
 
-    std::cout << "Total leaderboards: "
-        << Leaderboard::GetTotalLeaderboards() << "\n\n";
+    // освободим клонированные объекты
+    delete shallow;
+    delete deep;
 
-
-    // --- Challenge merging (operator+=) ---
-    std::cout << "[ CHALLENGES ]\n";
-
-    Challenge c1 = Challenge::createChallenge("c1", "30-day plank",
-        "Daily plank challenge", 30);
-    c1.join("u1");
-
-    Challenge c2 = Challenge::createChallenge("c2", "pushups week",
-        "Do pushups", 7);
-    c2.join("u2");
-
-    c1 += c2;
-    c1.showChallengeInfo();
-    std::cout << "\n";
-
-
-    // --- SLEEP TRACKING ---
-    std::cout << "[ SLEEP TRACKING ]\n";
-
-    SleepTracker sleepArray[2];
-    sleepArray[0] = SleepTracker::createSleepTracker("u1");
-    sleepArray[1] = SleepTracker::createSleepTracker("u2");
-
-    sleepArray[0].logSleep(7);
-    sleepArray[0].logSleep(8);
-
-    sleepArray[1].logSleep(6);
-    sleepArray[1].logSleep(7);
-
-    std::cout << "User1 avg sleep: " << sleepArray[0].averageSleep(2) << "\n";
-
-    std::unique_ptr<SleepTracker> dynSleep0 =
-        std::make_unique<SleepTracker>(SleepTracker::createSleepTracker("u4"));
-    dynSleep0->logSleep(9);
-    dynSleep0->logSleep(7);
-
-    std::cout << "Dyn user avg: " << dynSleep0->averageSleep(2) << "\n\n";
-
-
-    // --- vector of shared_ptr profiles ---
-    std::cout << "[ SHARED_PTR VECTOR ]\n";
-
-    std::vector<std::shared_ptr<CommunityProfile>> members;
-    members.push_back(carol);
-    members.push_back(carolCopy);
-
-    std::cout << "members[0] == members[1]? "
-        << (members[0] == members[1]) << "\n\n";
-
-
-    // --- Hydration with exception handling ---
-    std::cout << "[ HYDRATION TRACKER ]\n";
-
-    HydrationTracker ht =
-        HydrationTracker::createHydrationTracker("u1", 2000);
-
-    try {
-        ht.addDrink(500);
-        ht.addDrink(-100);
-    }
-    catch (const std::invalid_argument& ex) {
-        std::cout << "Caught invalid_argument: " << ex.what() << "\n";
-    }
-
-    ht.addDrink(300);
-    ht.showHydrationInfo();
-    std::cout << "\n";
-
-
-    // --- RecoverySession operator< demonstration ---
-    std::cout << "[ RECOVERY SESSION ]\n";
-
-    RecoverySession rs1 =
-        RecoverySession::createSession("s1", "2025-10-01", "yoga", 30, "evening");
-
-    RecoverySession rs2 =
-        RecoverySession::createSession("s2", "2025-10-02", "sleep", 60, "nap");
-
-    std::cout << "Shorter session is s1? " << (rs1 < rs2) << "\n\n";
-
-
-    // --- demonstrate 'this' ---
-    std::cout << "[ THIS DEMONSTRATION ]\n";
-
-    alice.awardBadge(Achievement::createAchievement("a3", "Consistency",
-        "7 days", 50));
-    alice.showProfileInfo();
-    std::cout << "\n";
-
-
-    // --- more exceptions ---
-    std::cout << "[ EXCEPTION TEST ]\n";
-    try {
-        auto bad = lb[100];
-        (void)bad;
-    }
-    catch (const std::exception& ex) {
-        std::cout << "Handled exception: " << ex.what() << "\n";
-    }
-
-
-    std::cout << "\n=== End demo ===\n";
     return 0;
 }
